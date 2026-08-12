@@ -1,5 +1,15 @@
 # Intelligent Exam Scheduler using Metaheuristics
 
+
+# Intelligent Exam Scheduler
+
+# 🌐 Live Demo
+
+ Intelligent Exam Scheduler(https://intelligent-exam-scheduler.onrender.com)
+
+
+
+
 A working web app that generates a clash-free exam timetable automatically.
 The "AI" is a **Genetic Algorithm** (a metaheuristic search technique) that
 evolves thousands of candidate timetables and converges on one with zero
