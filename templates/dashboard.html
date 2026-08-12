@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Registrar's Office</p>
+    <h2>Dashboard</h2>
+    <p class="sub">Everything the scheduler needs before it runs.</p>
+  </div>
+</div>
+
+<div class="grid cols-4">
+  <div class="stat"><div class="n">{{ counts.courses }}</div><div class="l">Courses</div></div>
+  <div class="stat"><div class="n">{{ counts.students }}</div><div class="l">Students</div></div>
+  <div class="stat"><div class="n">{{ counts.rooms }}</div><div class="l">Rooms</div></div>
+  <div class="stat"><div class="n">{{ counts.faculty }}</div><div class="l">Faculty</div></div>
+</div>
+
+<div class="card" style="margin-top: 22px;">
+  <div class="flex-between">
+    <div>
+      <h3 class="mt-0">Current schedule</h3>
+      {% if latest_run %}
+        <p class="muted" style="margin:0;">
+          Last generated {{ latest_run.created_at[:19].replace('T',' ') }} UTC ·
+          {{ scheduled_exams }} exams placed ·
+          {% if latest_run.final_conflicts == 0 %}
+            <span style="color:var(--good); font-weight:600;">clash-free</span>
+          {% else %}
+            <span style="color:var(--bad); font-weight:600;">{{ latest_run.final_conflicts }} conflicts remaining</span>
+          {% endif %}
+          in {{ latest_run.generations_run }} generations ({{ latest_run.seconds_taken }}s)
+        </p>
+      {% else %}
+        <p class="muted" style="margin:0;">No schedule generated yet.</p>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('generate_page') }}" class="btn btn-primary">Go to Generator →</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="mt-0">Setup checklist</h3>
+  <table class="ledger">
+    <tr><td>1. Add courses that need an exam</td><td><a href="{{ url_for('courses') }}">Courses →</a></td></tr>
+    <tr><td>2. Add students and enroll them in courses (this is what creates clashes to avoid)</td><td><a href="{{ url_for('students') }}">Students →</a></td></tr>
+    <tr><td>3. Add exam halls / rooms with seating capacity</td><td><a href="{{ url_for('rooms') }}">Rooms →</a></td></tr>
+    <tr><td>4. Add invigilating faculty</td><td><a href="{{ url_for('faculty') }}">Faculty →</a></td></tr>
+    <tr><td>5. Define the available exam time slots</td><td><a href="{{ url_for('timeslots') }}">Time Slots →</a></td></tr>
+    <tr><td>6. Let the AI generate a clash-free timetable</td><td><a href="{{ url_for('generate_page') }}">Generate →</a></td></tr>
+  </table>
+</div>
+{% endblock %}

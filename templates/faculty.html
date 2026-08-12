@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Faculty · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h2>Faculty &amp; Invigilators</h2>
+    <p class="sub">No invigilator is placed in two rooms at once, and duty load is capped per person.</p>
+  </div>
+</div>
+
+<div class="card" id="form-section">
+  <h3>{% if edit_item %}Edit Faculty{% else %}Add a faculty member{% endif %}</h3>
+  <form method="POST" action="{{ url_for('edit_faculty', faculty_id=edit_item.id) if edit_item else url_for('faculty') }}" class="grid cols-3">
+    <div>
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" value="{{ edit_item.name if edit_item else '' }}" placeholder="Dr. A. Mehta" required>
+    </div>
+    <div>
+      <label for="department">Department</label>
+      <input type="text" id="department" name="department" value="{{ edit_item.department if edit_item else '' }}" placeholder="CSE">
+    </div>
+    <div>
+      <label for="max_invigilations">Max invigilation duties</label>
+      <input type="number" id="max_invigilations" name="max_invigilations" value="{{ edit_item.max_invigilations if edit_item else '10' }}" min="1">
+    </div>
+    <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
+      <button type="submit" class="btn btn-primary">{% if edit_item %}Update faculty{% else %}Add faculty{% endif %}</button>
+      {% if edit_item %}<a href="{{ url_for('faculty') }}" class="btn btn-ghost">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3>All faculty ({{ faculty|length }})</h3>
+  {% if faculty %}
+  <table class="ledger">
+    <tr>
+      <th>Name</th>
+      <th>Department</th>
+      <th>Max Invigilations</th>
+      <th>Available</th>
+      <th>Actions</th>
+    </tr>
+    {% for f in faculty %}
+    <tr class="{% if edit_item and edit_item.id == f.id %}editing-row{% endif %}">
+      <td>{{ f.name }}</td>
+      <td>{{ f.department or '—' }}</td>
+      <td class="mono">{{ f.max_invigilations }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('toggle_faculty', faculty_id=f.id) }}" style="margin:0;">
+          <button type="submit" class="btn {% if f.is_active %}btn-primary{% else %}btn-ghost{% endif %}" style="padding:4px 12px; font-size:13px;">
+            {% if f.is_active %}ON{% else %}OFF{% endif %}
+          </button>
+        </form>
+      </td>
+      <td>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <a href="{{ url_for('edit_faculty', faculty_id=f.id) }}#form-section" class="tag" style="text-decoration: none; background: #e0e0e0; color: #333;">Edit</a>
+          <form method="POST" action="{{ url_for('delete_faculty', faculty_id=f.id) }}" onsubmit="return confirm('Remove {{ f.name }}?');" style="margin: 0;">
+            <button type="submit" class="btn-danger-text" style="padding: 0;">Remove</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="empty">No faculty yet. Add the first one above.</div>
+  {% endif %}
+</div>
+{% endblock %}

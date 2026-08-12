@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Student Lookup · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Scheduling</p>
+    <h2>Student Lookup</h2>
+    <p class="sub">Look up an individual exam schedule by roll number — this is what a hall ticket is built from.</p>
+  </div>
+</div>
+
+<div class="card">
+  <form method="GET" class="grid cols-3">
+    <div style="grid-column: span 2;">
+      <label for="roll_no">Roll number</label>
+      <input type="text" id="roll_no" name="roll_no" value="{{ roll_no }}" placeholder="CSE001" required>
+    </div>
+    <div style="align-self:end;"><button type="submit" class="btn btn-primary">Look up</button></div>
+  </form>
+</div>
+
+{% if roll_no %}
+  {% if student %}
+  <div class="card">
+    <h3>{{ student.name }} <span class="tag">{{ student.roll_no }}</span></h3>
+    {% if exams %}
+    <table class="ledger">
+      <tr><th>Date</th><th>Time</th><th>Course</th><th>Room</th><th>Invigilator</th></tr>
+      {% for e in exams %}
+      <tr>
+        <td class="mono">{{ e.exam_date or 'Not yet scheduled' }}</td>
+        <td class="mono">{{ e.start_time }}{% if e.end_time %}–{{ e.end_time }}{% endif %}</td>
+        <td><span class="tag">{{ e.code }}</span> {{ e.course_name }}</td>
+        <td>{{ e.room_name or '—' }}</td>
+        <td>{{ e.faculty_name or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty">This student has no exams scheduled yet.</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card"><div class="empty">No student found with roll number "{{ roll_no }}".</div></div>
+  {% endif %}
+{% endif %}
+{% endblock %}

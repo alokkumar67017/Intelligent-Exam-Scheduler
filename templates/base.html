@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Intelligent Exam Scheduler{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="seal">IES</div>
+      <h1>Intelligent Exam Scheduler</h1>
+      <p>Metaheuristic Timetabling</p>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}">Dashboard</a>
+
+      <div class="section-label">Records</div>
+      <a href="{{ url_for('courses') }}" class="{{ 'active' if request.endpoint=='courses' }}">Courses</a>
+      <a href="{{ url_for('students') }}" class="{{ 'active' if request.endpoint=='students' }}">Students</a>
+      <a href="{{ url_for('rooms') }}" class="{{ 'active' if request.endpoint=='rooms' }}">Rooms</a>
+      <a href="{{ url_for('faculty') }}" class="{{ 'active' if request.endpoint=='faculty' }}">Faculty</a>
+      <a href="{{ url_for('timeslots') }}" class="{{ 'active' if request.endpoint=='timeslots' }}">Time Slots</a>
+
+      <div class="section-label">Scheduling</div>
+      <a href="{{ url_for('generate_page') }}" class="{{ 'active' if request.endpoint=='generate_page' }}">Generate (AI)</a>
+      <a href="{{ url_for('timetable') }}" class="{{ 'active' if request.endpoint=='timetable' }}">Master Timetable</a>
+      <a href="{{ url_for('student_timetable') }}" class="{{ 'active' if request.endpoint=='student_timetable' }}">Student Lookup</a>
+    </nav>
+    <div class="sidebar-foot">Genetic Algorithm engine<br>v1.0</div>
+  </aside>
+
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Courses · Intelligent Exam Scheduler{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h2>Courses</h2>
+    <p class="sub">
+      Each course listed here needs exactly one exam placed on the timetable.
+    </p>
+  </div>
+</div>
+
+<div class="card" id="form-section">
+  <h3>
+    {% if edit_item %}
+      Edit Course
+    {% else %}
+      Add a Course
+    {% endif %}
+  </h3>
+
+  <form method="POST"
+        action="{{ url_for('edit_course', course_id=edit_item.id) if edit_item else url_for('courses') }}"
+        class="grid cols-4">
+
+    <div>
+      <label>Course Code</label>
+      <input
+        type="text"
+        name="code"
+        placeholder="CS301"
+        value="{{ edit_item.code if edit_item else '' }}"
+        required>
+    </div>
+
+    <div style="grid-column: span 2;">
+      <label>Course Name</label>
+      <input
+        type="text"
+        name="name"
+        placeholder="Data Structures & Algorithms"
+        value="{{ edit_item.name if edit_item else '' }}"
+        required>
+    </div>
+
+    <div>
+      <label>Semester</label>
+      <input
+        type="text"
+        name="semester"
+        placeholder="3"
+        value="{{ edit_item.semester if edit_item else '' }}">
+    </div>
+
+    <div>
+      <label>Duration (Minutes)</label>
+      <input
+        type="number"
+        name="duration_minutes"
+        min="30"
+        step="15"
+        value="{{ edit_item.duration_minutes if edit_item else '180' }}">
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:end;">
+      <button type="submit" class="btn btn-primary">
+        {% if edit_item %}
+          Update Course
+        {% else %}
+          Add Course
+        {% endif %}
+      </button>
+
+      {% if edit_item %}
+        <a href="{{ url_for('courses') }}" class="btn btn-ghost">
+          Cancel
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3>All Courses ({{ courses|length }})</h3>
+
+  {% if courses %}
+  <table class="ledger">
+    <tr>
+      <th>Code</th>
+      <th>Name</th>
+      <th>Semester</th>
+      <th>Duration</th>
+      <th>Enrolled</th>
+      <th>Actions</th>
+    </tr>
+
+    {% for c in courses %}
+    <tr class="{% if edit_item and edit_item.id == c.id %}editing-row{% endif %}">
+      <td class="mono">
+        <span class="tag">{{ c.code }}</span>
+      </td>
+      <td>{{ c.name }}</td>
+      <td>{{ c.semester or '—' }}</td>
+      <td class="mono">{{ c.duration_minutes }} min</td>
+      <td class="mono">{{ c.enrolled }}</td>
+      <td>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <a href="{{ url_for('edit_course', course_id=c.id) }}#form-section"
+             class="tag"
+             style="text-decoration:none; background:#e0e0e0; color:#333;">
+            Edit
+          </a>
+
+          <form method="POST"
+                action="{{ url_for('delete_course', course_id=c.id) }}"
+                style="margin:0;"
+                onsubmit="return confirm('Remove {{ c.code }}?');">
+            <button type="submit" class="btn-danger-text" style="padding:0;">
+              Remove
+            </button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% else %}
+  <div class="empty">
+    No courses yet. Add the first one above.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

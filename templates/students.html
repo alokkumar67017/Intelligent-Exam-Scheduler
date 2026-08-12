@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Students · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h2>Students</h2>
+    <p class="sub">Enrollments are what the AI protects — no student is ever double-booked into two exams at once.</p>
+  </div>
+</div>
+
+<div class="card" id="form-section">
+  <h3>{% if edit_item %}Edit Student{% else %}Add a student{% endif %}</h3>
+  <form method="POST" action="{{ url_for('edit_student', student_id=edit_item.id) if edit_item else url_for('students') }}" class="grid cols-3">
+    <div>
+      <label for="roll_no">Roll number</label>
+      <input type="text" id="roll_no" name="roll_no" value="{{ edit_item.roll_no if edit_item else '' }}" placeholder="CSE016" required>
+    </div>
+    <div>
+      <label for="name">Full name</label>
+      <input type="text" id="name" name="name" value="{{ edit_item.name if edit_item else '' }}" required>
+    </div>
+    <div>
+      <label for="semester">Semester</label>
+      <input type="text" id="semester" name="semester" value="{{ edit_item.semester if edit_item else '' }}" placeholder="3">
+    </div>
+    <div style="grid-column: 1 / -1;">
+      <label>Enrolled courses</label>
+      {% if all_courses %}
+      <div class="checkbox-grid">
+        {% for c in all_courses %}
+        <label>
+          <input type="checkbox" name="course_ids" value="{{ c.id }}" {% if edit_item and c.id in enrolled_ids %}checked{% endif %}> 
+          {{ c.code }}
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted" style="margin-top:0;">Add courses first before enrolling students.</p>
+      {% endif %}
+    </div>
+    <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
+      <button type="submit" class="btn btn-primary">{% if edit_item %}Update student{% else %}Add student{% endif %}</button>
+      {% if edit_item %}<a href="{{ url_for('students') }}" class="btn btn-ghost">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3>All students ({{ students|length }})</h3>
+  {% if students %}
+  <table class="ledger">
+    <tr><th>Roll No.</th><th>Name</th><th>Semester</th><th>Courses enrolled</th><th></th></tr>
+    {% for s in students %}
+    <tr class="{% if edit_item and edit_item.id == s.id %}editing-row{% endif %}">
+      <td class="mono"><span class="tag">{{ s.roll_no }}</span></td>
+      <td>{{ s.name }}</td>
+      <td>{{ s.semester or '—' }}</td>
+      <td class="mono">{{ s.n_courses }}</td>
+      <td>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <a href="{{ url_for('edit_student', student_id=s.id) }}#form-section" class="tag" style="text-decoration: none; background: #e0e0e0; color: #333;">Edit</a>
+          <form method="POST" action="{{ url_for('delete_student', student_id=s.id) }}" onsubmit="return confirm('Remove {{ s.roll_no }}?');" style="margin: 0;">
+            <button type="submit" class="btn-danger-text" style="padding: 0;">Remove</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="empty">No students yet. Add the first one above.</div>
+  {% endif %}
+</div>
+{% endblock %}

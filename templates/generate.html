@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Generate · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Scheduling</p>
+    <h2>Generate the timetable</h2>
+    <p class="sub">Compare metaheuristic algorithms to find a schedule with zero clashes.</p>
+  </div>
+</div>
+
+<div class="ai-panel">
+  <h3>Run the metaheuristic</h3>
+  <p>
+    Every course is assigned a time slot, room, and invigilator. Choose your algorithm below.
+    Multiple courses can share a room if seats allow; large courses are split across rooms.
+  </p>
+
+  <!-- ========== MULTI-SEMESTER FILTER (HIGH VISIBILITY) ========== -->
+  <div style="
+      margin: 24px 0;
+      padding: 18px 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(37, 99, 235, 0.15));
+      border: 2px solid #3b82f6;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+  ">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+      <span style="
+          background:#3b82f6;
+          color:white;
+          font-size:12px;
+          font-weight:700;
+          padding:4px 10px;
+          border-radius:5px;
+          letter-spacing:0.6px;
+      ">FILTER</span>
+      <span style="color:#93c5fd; font-weight:700; font-size:17px;">
+        Select Semester(s)
+      </span>
+      <span style="color:rgba(226,232,240,0.65); font-size:13px;">
+        (leave empty = All Semesters)
+      </span>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      {% for s in range(1, 9) %}
+      <label class="sem-label" style="
+          display:flex; align-items:center; gap:8px; cursor:pointer;
+          padding: 8px 14px; border-radius: 8px;
+          background: rgba(15, 23, 42, 0.55);
+          border: 1.5px solid rgba(148, 163, 184, 0.35);
+          transition: all 0.15s ease;
+          font-weight: 600;
+          font-size: 14px;
+          color: #e2e8f0;
+          user-select: none;
+      ">
+        <input type="checkbox" class="sem-check" value="{{ s }}"
+               style="width:17px; height:17px; accent-color:#3b82f6; cursor:pointer;">
+        Semester {{ s }}
+      </label>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button type="button" id="selectAllSem" class="btn"
+              style="padding:6px 16px; font-size:13px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:600;">
+        Select All
+      </button>
+      <button type="button" id="clearAllSem" class="btn btn-ghost"
+              style="padding:6px 16px; font-size:13px; border-radius:6px;">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div style="margin: 16px 0;">
+    <label for="algorithm" style="color: rgba(236,238,230,0.85); font-weight: 500;">Select Algorithm Engine:</label>
+    <select id="algorithm" name="algorithm" style="max-width: 300px; margin-top: 6px;">
+      <option value="GA">Genetic Algorithm (GA) - Recommended</option>
+      <option value="PSO">Particle Swarm Optimization (PSO)</option>
+      <option value="DE">Differential Evolution (DE)</option>
+    </select>
+  </div>
+
+  {% set ready = counts.courses > 0 and counts.rooms > 0 and counts.faculty > 0 and counts.timeslots > 0 %}
+  <button id="runBtn" class="btn btn-primary" {% if not ready %}disabled{% endif %}>
+    {% if ready %}Generate clash-free timetable{% else %}Add courses, rooms, faculty & time slots first{% endif %}
+  </button>
+
+  <div class="progress-log" id="progressLog"></div>
+
+  <div class="result-banner" id="resultBanner">
+    <div class="stamp" id="resultStamp">
+      <span class="top">registrar</span>
+      <span class="mid" id="stampMid">—</span>
+      <span class="bot">verified</span>
+    </div>
+    <div id="resultText"></div>
+  </div>
+
+  <!-- Diagnosis box -->
+  <div id="diagnosisBox" style="display:none; margin-top: 24px; padding: 16px 20px; border-radius: 10px; background: rgba(224, 80, 60, 0.12); border: 1px solid rgba(224, 80, 60, 0.35);">
+    <h3 id="diagnosisTitle" style="margin: 0 0 12px 0; color: #e07060;"></h3>
+    <div id="diagnosisProblems"></div>
+    <div id="diagnosisSuggestions" style="margin-top: 14px;"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>How the search works</h3>
+  <table class="ledger">
+    <tr><td class="mono" style="width:160px;">Representation</td><td>One gene per course (time slot). Rooms & invigilators assigned by the packer.</td></tr>
+    <tr><td class="mono">Room model</td><td>Multiple courses can share a room if total students ≤ capacity. Large courses split across free seats.</td></tr>
+    <tr><td class="mono">Hard constraints</td><td>No shared-student clash · no seating overflow · no invigilator double-booking or overload</td></tr>
+    <tr><td class="mono">Fitness Metric</td><td>Hard/soft conflict penalties, shown as Accuracy %</td></tr>
+    <tr><td class="mono">Semester filter</td><td>Select any combination of semesters. Only those courses & students are scheduled.</td></tr>
+  </table>
+</div>
+
+<script>
+const runBtn = document.getElementById('runBtn');
+const log = document.getElementById('progressLog');
+const banner = document.getElementById('resultBanner');
+const stamp = document.getElementById('resultStamp');
+const stampMid = document.getElementById('stampMid');
+const resultText = document.getElementById('resultText');
+const algoSelect = document.getElementById('algorithm');
+const diagnosisBox = document.getElementById('diagnosisBox');
+const diagnosisTitle = document.getElementById('diagnosisTitle');
+const diagnosisProblems = document.getElementById('diagnosisProblems');
+const diagnosisSuggestions = document.getElementById('diagnosisSuggestions');
+
+// Select All / Clear
+document.getElementById('selectAllSem').addEventListener('click', () => {
+  document.querySelectorAll('.sem-check').forEach(cb => {
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change'));
+  });
+});
+document.getElementById('clearAllSem').addEventListener('click', () => {
+  document.querySelectorAll('.sem-check').forEach(cb => {
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+  });
+});
+
+// Highlight checked semester labels
+document.querySelectorAll('.sem-check').forEach(cb => {
+  const label = cb.closest('.sem-label');
+  const update = () => {
+    if (cb.checked) {
+      label.style.background = 'rgba(59, 130, 246, 0.45)';
+      label.style.borderColor = '#60a5fa';
+      label.style.color = '#ffffff';
+      label.style.boxShadow = '0 0 0 1px rgba(96, 165, 250, 0.5)';
+    } else {
+      label.style.background = 'rgba(15, 23, 42, 0.55)';
+      label.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+      label.style.color = '#e2e8f0';
+      label.style.boxShadow = 'none';
+    }
+  };
+  cb.addEventListener('change', update);
+  update();
+});
+
+if (runBtn && !runBtn.disabled) {
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Evolving timetables…';
+    log.style.display = 'block';
+    log.innerHTML = `<div>Initializing ${algoSelect.value} population…</div>`;
+    banner.style.display = 'none';
+    diagnosisBox.style.display = 'none';
+
+    const selectedSemesters = Array.from(document.querySelectorAll('.sem-check:checked'))
+                                   .map(cb => cb.value);
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          generations: 400,
+          population_size: 80,
+          algorithm: algoSelect.value,
+          semesters: selectedSemesters
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+      if (data.history && data.history.length) {
+        data.history.forEach(h => {
+          const line = document.createElement('div');
+          line.textContent = `Generation ${String(h.generation).padStart(3,'0')}  —  cost ${h.best_cost}  —  ${h.hard_conflicts} hard conflict(s)`;
+          log.appendChild(line);
+        });
+        log.scrollTop = log.scrollHeight;
+      }
+
+      const ok = data.hard_conflicts === 0;
+      banner.className = 'result-banner ' + (ok ? 'ok' : 'warn');
+      banner.style.display = 'flex';
+      stamp.className = 'stamp' + (ok ? '' : ' bad');
+      stampMid.textContent = ok ? 'CLEAR' : data.hard_conflicts;
+
+      const semLabel = data.semester_filter && data.semester_filter !== "All"
+        ? ` (Semesters: ${data.semester_filter})`
+        : '';
+
+      resultText.innerHTML = ok
+        ? `<strong>Clash-free timetable produced with ${data.accuracy}% Accuracy!${semLabel}</strong><br>
+           Converged in ${data.generations_run} generations (${data.seconds_taken}s).
+           <a href="/timetable" style="color:inherit; text-decoration:underline;">View the master timetable →</a>`
+        : `<strong>${data.hard_conflicts} conflict(s) remain (${data.accuracy}% Accuracy)${semLabel}</strong>
+           after ${data.generations_run} generations (${data.seconds_taken}s).
+           <a href="/timetable" style="color:inherit; text-decoration:underline;">View best attempt →</a>`;
+
+      if (data.diagnosis && data.hard_conflicts > 0) {
+        diagnosisBox.style.display = 'block';
+        diagnosisTitle.textContent = `⚠ Schedule has ${data.hard_conflicts} hard conflict(s) — action needed`;
+
+        let html = '';
+        if (data.diagnosis.problems && data.diagnosis.problems.length) {
+          html += '<p style="margin:0 0 6px 0;"><strong>Problems found in this schedule:</strong></p>';
+          html += '<ul style="margin:0 0 0 18px; padding:0;">';
+          data.diagnosis.problems.forEach(p => {
+            html += `<li style="margin-bottom:4px;">${p}</li>`;
+          });
+          html += '</ul>';
+        }
+        diagnosisProblems.innerHTML = html;
+
+        html = '';
+        if (data.diagnosis.suggestions && data.diagnosis.suggestions.length) {
+          html += '<p style="margin:0 0 6px 0;"><strong>What you should do to minimize conflicts:</strong></p>';
+          html += '<ul style="margin:0 0 0 18px; padding:0;">';
+          data.diagnosis.suggestions.forEach(s => {
+            html += `<li style="margin-bottom:4px;">→ ${s}</li>`;
+          });
+          html += '</ul>';
+        }
+        diagnosisSuggestions.innerHTML = html;
+      } else {
+        diagnosisBox.style.display = 'none';
+      }
+
+      runBtn.textContent = 'Run again';
+      runBtn.disabled = false;
+    } catch (err) {
+      log.innerHTML += `<div style="color:#e08c82;">Error: ${err.message}</div>`;
+      runBtn.textContent = 'Retry';
+      runBtn.disabled = false;
+    }
+  });
+}
+</script>
+{% endblock %}

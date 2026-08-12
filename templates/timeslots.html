@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Time Slots · Intelligent Exam Scheduler{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Records</p>
+    <h2>Time Slots</h2>
+    <p class="sub">The exam window the AI is allowed to schedule into. Add every date and session your institution has approved.</p>
+  </div>
+</div>
+
+<div class="card" id="form-section">
+  <h3>{% if edit_item %}Edit Time Slot{% else %}Add a time slot{% endif %}</h3>
+  <form method="POST" action="{{ url_for('edit_timeslot', ts_id=edit_item.id) if edit_item else url_for('timeslots') }}" class="grid cols-4">
+    <div>
+      <label for="exam_date">Date</label>
+      <input type="date" id="exam_date" name="exam_date" value="{{ edit_item.exam_date if edit_item else '' }}" required>
+    </div>
+    <div>
+      <label for="start_time">Start time</label>
+      <input type="time" id="start_time" name="start_time" value="{{ edit_item.start_time if edit_item else '' }}" required>
+    </div>
+    <div>
+      <label for="end_time">End time</label>
+      <input type="time" id="end_time" name="end_time" value="{{ edit_item.end_time if edit_item else '' }}" required>
+    </div>
+    <div>
+      <label for="label">Label</label>
+      <input type="text" id="label" name="label" value="{{ edit_item.label if edit_item else '' }}" placeholder="Day 1 - Morning">
+    </div>
+    <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
+      <button type="submit" class="btn btn-primary">{% if edit_item %}Update slot{% else %}Add slot{% endif %}</button>
+      {% if edit_item %}<a href="{{ url_for('timeslots') }}" class="btn btn-ghost">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3>All time slots ({{ timeslots|length }})</h3>
+  {% if timeslots %}
+  <table class="ledger">
+    <tr><th>Date</th><th>Start</th><th>End</th><th>Label</th><th></th></tr>
+    {% for t in timeslots %}
+    <tr class="{% if edit_item and edit_item.id == t.id %}editing-row{% endif %}">
+      <td class="mono">{{ t.exam_date }}</td>
+      <td class="mono">{{ t.start_time }}</td>
+      <td class="mono">{{ t.end_time }}</td>
+      <td>{{ t.label or '—' }}</td>
+      <td>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <a href="{{ url_for('edit_timeslot', ts_id=t.id) }}#form-section" class="tag" style="text-decoration: none; background: #e0e0e0; color: #333;">Edit</a>
+          <form method="POST" action="{{ url_for('delete_timeslot', ts_id=t.id) }}" onsubmit="return confirm('Remove this slot?');" style="margin: 0;">
+            <button type="submit" class="btn-danger-text" style="padding: 0;">Remove</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="empty">No time slots yet. Add the first one above.</div>
+  {% endif %}
+</div>
+{% endblock %}
